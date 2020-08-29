@@ -1,7 +1,11 @@
 package com.yhy.http.pigeon.starter.register;
 
 import com.yhy.http.pigeon.Pigeon;
+import com.yhy.http.pigeon.starter.internal.VoidSSLHostnameVerifier;
+import com.yhy.http.pigeon.starter.internal.VoidSSLSocketFactory;
+import com.yhy.http.pigeon.starter.internal.VoidSSLX509TrustManager;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Interceptor;
 import org.jetbrains.annotations.NotNull;
@@ -15,9 +19,11 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.X509TrustManager;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * author : 颜洪毅
@@ -28,24 +34,20 @@ import java.util.Objects;
  */
 @Data
 @Slf4j
-//@EqualsAndHashCode
+@EqualsAndHashCode
 public class PigeonFactoryBean implements FactoryBean<Object>, InitializingBean, ApplicationContextAware {
     private ApplicationContext applicationContext;
 
     private Class<?> pigeonInterface;
     private String baseURL;
-    private Map<String, Object> header;
+    private Map<String, String> header;
     private List<Class<? extends Interceptor>> interceptors;
     private List<Class<? extends Interceptor>> netInterceptors;
     private long timeout;
     private boolean logging;
-
-    public PigeonFactoryBean() {
-    }
-
-    public PigeonFactoryBean(Class<?> pigeonInterface) {
-        this.pigeonInterface = pigeonInterface;
-    }
+    private Class<? extends SSLSocketFactory> sslSocketFactory;
+    private Class<? extends X509TrustManager> sslTrustManager;
+    private Class<? extends HostnameVerifier> sslHostnameVerifier;
 
     @Override
     public Object getObject() throws Exception {
@@ -64,33 +66,13 @@ public class PigeonFactoryBean implements FactoryBean<Object>, InitializingBean,
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        Assert.hasText(this.baseURL, "Pigeon [baseURL] id must be set");
-        log.debug("@Pigeon properties set complete.");
+        Assert.hasText(this.baseURL, "Pigeon [baseURL] must be set.");
+        log.info("@Pigeon properties for [{}] set complete.", pigeonInterface);
     }
 
     @Override
     public void setApplicationContext(@NotNull ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-//        if (this == o) {
-//            return true;
-//        }
-//        if (o == null || getClass() != o.getClass()) {
-//            return false;
-//        }
-//        PigeonFactoryBean that = (PigeonFactoryBean) o;
-//        return Objects.equals(this.applicationContext, that.applicationContext)
-//                && Objects.equals(this.baseURL, that.baseURL)
-//                && Objects.equals(this.pigeonInterface, that.pigeonInterface);
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(this.applicationContext, this.baseURL, this.pigeonInterface);
     }
 
     @SuppressWarnings("unchecked")
@@ -107,6 +89,9 @@ public class PigeonFactoryBean implements FactoryBean<Object>, InitializingBean,
         }
         if (timeout > 0) {
             builder.timeout(timeout);
+        }
+        if (sslSocketFactory != null && sslSocketFactory != VoidSSLSocketFactory.class && sslTrustManager != null && sslTrustManager != VoidSSLX509TrustManager.class && sslHostnameVerifier != null && sslHostnameVerifier != VoidSSLHostnameVerifier.class) {
+            builder.https(getOrInstantiate(sslSocketFactory), getOrInstantiate(sslTrustManager), getOrInstantiate(sslHostnameVerifier));
         }
         return (T) builder.build().create(pigeonInterface);
     }

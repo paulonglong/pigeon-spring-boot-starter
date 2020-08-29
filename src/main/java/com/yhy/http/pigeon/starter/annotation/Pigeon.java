@@ -1,7 +1,13 @@
 package com.yhy.http.pigeon.starter.annotation;
 
+import com.yhy.http.pigeon.starter.internal.VoidSSLHostnameVerifier;
+import com.yhy.http.pigeon.starter.internal.VoidSSLSocketFactory;
+import com.yhy.http.pigeon.starter.internal.VoidSSLX509TrustManager;
 import org.springframework.core.annotation.AliasFor;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.X509TrustManager;
 import java.lang.annotation.*;
 
 /**
@@ -34,4 +40,10 @@ public @interface Pigeon {
     long timeout() default 6000L;
 
     boolean logging() default true;
+
+    Class<? extends SSLSocketFactory> sslSocketFactory() default VoidSSLSocketFactory.class;
+
+    Class<? extends X509TrustManager> sslTrustManager() default VoidSSLX509TrustManager.class;
+
+    Class<? extends HostnameVerifier> sslHostnameVerifier() default VoidSSLHostnameVerifier.class;
 }

@@ -13,9 +13,10 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+
 public @interface Interceptor {
 
-    Class<? extends okhttp3.Interceptor> clazz();
+    Class<? extends okhttp3.Interceptor> value();
 
     boolean net() default false;
 }
