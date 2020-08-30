@@ -5,7 +5,6 @@ import com.yhy.http.pigeon.starter.internal.VoidSSLHostnameVerifier;
 import com.yhy.http.pigeon.starter.internal.VoidSSLSocketFactory;
 import com.yhy.http.pigeon.starter.internal.VoidSSLX509TrustManager;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Interceptor;
 import org.jetbrains.annotations.NotNull;
@@ -24,6 +23,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.X509TrustManager;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * author : 颜洪毅
@@ -34,7 +34,6 @@ import java.util.Map;
  */
 @Data
 @Slf4j
-@EqualsAndHashCode
 public class PigeonFactoryBean implements FactoryBean<Object>, InitializingBean, ApplicationContextAware {
     private ApplicationContext applicationContext;
 
@@ -102,5 +101,20 @@ public class PigeonFactoryBean implements FactoryBean<Object>, InitializingBean,
         } catch (NoSuchBeanDefinitionException e) {
             return BeanUtils.instantiateClass(tClass);
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PigeonFactoryBean that = (PigeonFactoryBean) o;
+        return Objects.equals(applicationContext, that.applicationContext) &&
+                Objects.equals(pigeonInterface, that.pigeonInterface) &&
+                Objects.equals(baseURL, that.baseURL);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(applicationContext, pigeonInterface, baseURL);
     }
 }

@@ -20,8 +20,7 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Inherited
-public @interface Pigeon {
+public @interface PigeonClient {
 
     @AliasFor("name")
     String value() default "";
@@ -33,9 +32,9 @@ public @interface Pigeon {
 
     String baseURL() default "";
 
-    Header[] header() default {};
+    HeaderClient[] header() default {};
 
-    Interceptor[] interceptor() default {};
+    InterceptorClient[] interceptor() default {};
 
     long timeout() default 6000L;
 

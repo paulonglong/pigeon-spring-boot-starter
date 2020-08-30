@@ -1,13 +1,12 @@
 package com.yhy.http.pigeon.starter;
 
-import com.yhy.http.pigeon.starter.annotation.Header;
-import com.yhy.http.pigeon.starter.annotation.Interceptor;
+import com.yhy.http.pigeon.starter.annotation.HeaderClient;
+import com.yhy.http.pigeon.starter.annotation.InterceptorClient;
 import com.yhy.http.pigeon.starter.internal.VoidSSLHostnameVerifier;
 import com.yhy.http.pigeon.starter.internal.VoidSSLSocketFactory;
 import com.yhy.http.pigeon.starter.internal.VoidSSLX509TrustManager;
 import com.yhy.http.pigeon.starter.register.PigeonAutoRegister;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.annotation.AliasFor;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
@@ -24,21 +23,20 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Inherited
 @Import({PigeonAutoRegister.class})
-public @interface EnablePigeon {
+public @interface EnablePigeonClient {
 
-    @AliasFor("value")
-    String[] basePackage() default "";
-
-    @AliasFor("basePackage")
     String[] value() default "";
+
+    String[] basePackages() default "";
+
+    Class<?>[] basePackageClasses() default {};
 
     String baseURL() default "";
 
-    Header[] header() default {};
+    HeaderClient[] header() default {};
 
-    Interceptor[] interceptor() default {};
+    InterceptorClient[] interceptor() default {};
 
     long timeout() default 6000L;
 

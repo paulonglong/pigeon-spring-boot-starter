@@ -1,7 +1,7 @@
 package com.yhy.http.pigeon.starter.register;
 
-import com.yhy.http.pigeon.starter.EnablePigeon;
-import com.yhy.http.pigeon.starter.annotation.Pigeon;
+import com.yhy.http.pigeon.starter.EnablePigeonClient;
+import com.yhy.http.pigeon.starter.annotation.PigeonClient;
 import com.yhy.http.pigeon.starter.internal.VoidSSLHostnameVerifier;
 import com.yhy.http.pigeon.starter.internal.VoidSSLSocketFactory;
 import com.yhy.http.pigeon.starter.internal.VoidSSLX509TrustManager;
@@ -74,7 +74,7 @@ public class PigeonAutoRegister implements ImportBeanDefinitionRegistrar, Resour
     }
 
     private void registerDefaultConfiguration(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
-        Map<String, Object> attributes = metadata.getAnnotationAttributes(EnablePigeon.class.getCanonicalName());
+        Map<String, Object> attributes = metadata.getAnnotationAttributes(EnablePigeonClient.class.getCanonicalName());
         log.info("Loading global configuration for @Pigeon from @EnablePigeon: {}", attributes);
         if (!CollectionUtils.isEmpty(attributes)) {
             attributes.forEach((name, value) -> {
@@ -104,46 +104,43 @@ public class PigeonAutoRegister implements ImportBeanDefinitionRegistrar, Resour
         for (String pkg : basePackages) {
             Set<BeanDefinition> candidates = scanner.findCandidateComponents(pkg);
             for (BeanDefinition candidate : candidates) {
-                AnnotatedBeanDefinition definition = (AnnotatedBeanDefinition) candidate;
-                AnnotationMetadata meta = definition.getMetadata();
-                Assert.isTrue(meta.isInterface(), "@Pigeon can only be specified on an interface.");
-                Map<String, Object> attrs = meta.getAnnotationAttributes(Pigeon.class.getCanonicalName());
-                log.info("Scanning @Pigeon candidate [{}], attrs = {}", candidate.getBeanClassName(), attrs);
+                if (candidate instanceof AnnotatedBeanDefinition) {
+                    AnnotatedBeanDefinition definition = (AnnotatedBeanDefinition) candidate;
+                    AnnotationMetadata meta = definition.getMetadata();
+                    Assert.isTrue(meta.isInterface(), "@Pigeon can only be specified on an interface.");
+                    Map<String, Object> attrs = meta.getAnnotationAttributes(PigeonClient.class.getCanonicalName());
+                    log.info("Scanning @Pigeon candidate [{}], attrs = {}", candidate.getBeanClassName(), attrs);
 
-                registerPigeon(registry, meta, attrs);
+                    registerPigeon(registry, meta, attrs);
+                }
             }
         }
     }
 
     private void registerPigeon(BeanDefinitionRegistry registry, AnnotationMetadata meta, Map<String, Object> attrs) {
-        BeanDefinitionBuilder definition = BeanDefinitionBuilder.genericBeanDefinition(PigeonFactoryBean.class);
+        BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(PigeonFactoryBean.class);
         String className = meta.getClassName();
         String name = getName(attrs);
         String qualifier = getQualifier(attrs);
         AnnotationAttributes[] interceptors = (AnnotationAttributes[]) attrs.get("interceptor");
 
-        List<Class<? extends Interceptor>> interceptors1 = getInterceptors(interceptors, false);
+        builder.addPropertyValue("pigeonInterface", className);
+        builder.addPropertyValue("baseURL", getBaseURL(attrs));
+        builder.addPropertyValue("header", getHeader(attrs));
+        builder.addPropertyValue("interceptors", getInterceptors(interceptors, false));
+        builder.addPropertyValue("netInterceptors", getInterceptors(interceptors, true));
+        builder.addPropertyValue("timeout", getTimeout(attrs));
+        builder.addPropertyValue("logging", getLogging(attrs));
+        builder.addPropertyValue("sslSocketFactory", getSSLSocketFactory(attrs));
+        builder.addPropertyValue("sslTrustManager", getSSLTrustManager(attrs));
+        builder.addPropertyValue("sslHostnameVerifier", getSSLHostnameVerifier(attrs));
+        builder.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
 
-        definition.addPropertyValue("pigeonInterface", className);
-        definition.addPropertyValue("baseURL", getBaseURL(attrs));
-        definition.addPropertyValue("header", getHeader(attrs));
-        definition.addPropertyValue("interceptors", interceptors1);
-        definition.addPropertyValue("netInterceptors", getInterceptors(interceptors, true));
-        definition.addPropertyValue("timeout", getTimeout(attrs));
-        definition.addPropertyValue("logging", getLogging(attrs));
-        definition.addPropertyValue("sslSocketFactory", getSSLSocketFactory(attrs));
-        definition.addPropertyValue("sslTrustManager", getSSLTrustManager(attrs));
-        definition.addPropertyValue("sslHostnameVerifier", getSSLHostnameVerifier(attrs));
-        definition.setLazyInit(true);
-
-        // 按类型注入
-        definition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
-
-        String alias = StringUtils.hasText(qualifier) ? qualifier : StringUtils.hasText(name) ? name : className + "#PigeonInterface";
-        AbstractBeanDefinition beanDefinition = definition.getBeanDefinition();
+        AbstractBeanDefinition beanDefinition = builder.getBeanDefinition();
+        String alias = StringUtils.hasText(qualifier) ? qualifier : StringUtils.hasText(name) ? name : className + "PigeonClient";
         beanDefinition.setPrimary(true);
 
-        // 注入 bean
+        //        // 注入 bean
         BeanDefinitionHolder holder = new BeanDefinitionHolder(beanDefinition, className, new String[]{alias});
         BeanDefinitionReaderUtils.registerBeanDefinition(holder, registry);
     }
@@ -171,7 +168,8 @@ public class PigeonAutoRegister implements ImportBeanDefinitionRegistrar, Resour
     private Map<String, String> getHeader(Map<String, Object> attrs) {
         AnnotationAttributes[] headers = (AnnotationAttributes[]) attrs.get("header");
         if (null != headers && headers.length > 0) {
-            Map<String, String> temp = Stream.of(headers).collect(Collectors.toMap(key -> key.getString("name"), value -> value.getString("value")));
+            // key 重复时以后者为准
+            Map<String, String> temp = Stream.of(headers).collect(Collectors.toMap(attr -> attr.getString("name"), attr -> attr.getString("value"), (k1, k2) -> k2));
             if (CollectionUtils.isEmpty(temp)) {
                 temp = header;
             } else if (!CollectionUtils.isEmpty(header)) {
@@ -237,31 +235,33 @@ public class PigeonAutoRegister implements ImportBeanDefinitionRegistrar, Resour
         return value;
     }
 
-    @SuppressWarnings("rawtypes")
     protected Set<String> getBasePackages(AnnotationMetadata metadata) {
-        Set<String> basePackage = new HashSet<>();
-        Map<String, Object> attributes = metadata.getAnnotationAttributes(EnablePigeon.class.getCanonicalName());
+        Set<String> basePackages = new HashSet<>();
+        Map<String, Object> attributes = metadata.getAnnotationAttributes(EnablePigeonClient.class.getCanonicalName());
         if (null != attributes) {
             Object value = attributes.get("value");
             if (null != value) {
                 for (String pkg : (String[]) value) {
                     if (StringUtils.hasText(pkg)) {
-                        basePackage.add(pkg);
+                        basePackages.add(pkg);
                     }
                 }
             }
-            value = attributes.get("basePackage");
+            value = attributes.get("basePackages");
             if (null != value) {
-                for (String pkg : (String[]) attributes.get("basePackage")) {
+                for (String pkg : (String[]) attributes.get("basePackages")) {
                     if (StringUtils.hasText(pkg)) {
-                        basePackage.add(pkg);
+                        basePackages.add(pkg);
                     }
                 }
             }
-            if (basePackage.isEmpty()) {
-                basePackage.add(ClassUtils.getPackageName(metadata.getClassName()));
+            for (Class<?> clazz : (Class[]) attributes.get("basePackageClasses")) {
+                basePackages.add(ClassUtils.getPackageName(clazz));
+            }
+            if (basePackages.isEmpty()) {
+                basePackages.add(ClassUtils.getPackageName(metadata.getClassName()));
             }
         }
-        return basePackage;
+        return basePackages;
     }
 }
