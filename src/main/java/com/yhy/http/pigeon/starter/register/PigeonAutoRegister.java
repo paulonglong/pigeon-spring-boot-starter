@@ -1,7 +1,7 @@
 package com.yhy.http.pigeon.starter.register;
 
-import com.yhy.http.pigeon.starter.EnablePigeonClient;
-import com.yhy.http.pigeon.starter.annotation.PigeonClient;
+import com.yhy.http.pigeon.starter.EnablePigeon;
+import com.yhy.http.pigeon.starter.annotation.Pigeon;
 import com.yhy.http.pigeon.starter.internal.VoidSSLHostnameVerifier;
 import com.yhy.http.pigeon.starter.internal.VoidSSLSocketFactory;
 import com.yhy.http.pigeon.starter.internal.VoidSSLX509TrustManager;
@@ -17,11 +17,13 @@ import org.springframework.beans.factory.support.BeanDefinitionReaderUtils;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.ResourceLoaderAware;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.AnnotationMetadata;
+import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
@@ -74,7 +76,7 @@ public class PigeonAutoRegister implements ImportBeanDefinitionRegistrar, Resour
     }
 
     private void registerDefaultConfiguration(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
-        Map<String, Object> attributes = metadata.getAnnotationAttributes(EnablePigeonClient.class.getCanonicalName());
+        Map<String, Object> attributes = metadata.getAnnotationAttributes(EnablePigeon.class.getCanonicalName());
         log.info("Loading global configuration for @Pigeon from @EnablePigeon: {}", attributes);
         if (!CollectionUtils.isEmpty(attributes)) {
             attributes.forEach((name, value) -> {
@@ -96,9 +98,9 @@ public class PigeonAutoRegister implements ImportBeanDefinitionRegistrar, Resour
     }
 
     private void registerPigeons(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
-        PigeonAutoScanner scanner = new PigeonAutoScanner(registry);
+        ClassPathScanningCandidateComponentProvider scanner = getScanner();
         scanner.setResourceLoader(resourceLoader);
-        scanner.registerFilters();
+        scanner.addIncludeFilter(new AnnotationTypeFilter(Pigeon.class));
 
         Set<String> basePackages = getBasePackages(metadata);
         for (String pkg : basePackages) {
@@ -108,7 +110,7 @@ public class PigeonAutoRegister implements ImportBeanDefinitionRegistrar, Resour
                     AnnotatedBeanDefinition definition = (AnnotatedBeanDefinition) candidate;
                     AnnotationMetadata meta = definition.getMetadata();
                     Assert.isTrue(meta.isInterface(), "@Pigeon can only be specified on an interface.");
-                    Map<String, Object> attrs = meta.getAnnotationAttributes(PigeonClient.class.getCanonicalName());
+                    Map<String, Object> attrs = meta.getAnnotationAttributes(Pigeon.class.getCanonicalName());
                     log.info("Scanning @Pigeon candidate [{}], attrs = {}", candidate.getBeanClassName(), attrs);
 
                     registerPigeon(registry, meta, attrs);
@@ -137,10 +139,10 @@ public class PigeonAutoRegister implements ImportBeanDefinitionRegistrar, Resour
         builder.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
 
         AbstractBeanDefinition beanDefinition = builder.getBeanDefinition();
-        String alias = StringUtils.hasText(qualifier) ? qualifier : StringUtils.hasText(name) ? name : className + "PigeonClient";
-        beanDefinition.setPrimary(true);
+        String alias = StringUtils.hasText(qualifier) ? qualifier : StringUtils.hasText(name) ? name : className + "Pigeon";
+        beanDefinition.setPrimary((Boolean) attrs.get("primary"));
 
-        //        // 注入 bean
+        // 注入 bean
         BeanDefinitionHolder holder = new BeanDefinitionHolder(beanDefinition, className, new String[]{alias});
         BeanDefinitionReaderUtils.registerBeanDefinition(holder, registry);
     }
@@ -237,7 +239,7 @@ public class PigeonAutoRegister implements ImportBeanDefinitionRegistrar, Resour
 
     protected Set<String> getBasePackages(AnnotationMetadata metadata) {
         Set<String> basePackages = new HashSet<>();
-        Map<String, Object> attributes = metadata.getAnnotationAttributes(EnablePigeonClient.class.getCanonicalName());
+        Map<String, Object> attributes = metadata.getAnnotationAttributes(EnablePigeon.class.getCanonicalName());
         if (null != attributes) {
             Object value = attributes.get("value");
             if (null != value) {
@@ -263,5 +265,14 @@ public class PigeonAutoRegister implements ImportBeanDefinitionRegistrar, Resour
             }
         }
         return basePackages;
+    }
+
+    protected ClassPathScanningCandidateComponentProvider getScanner() {
+        return new ClassPathScanningCandidateComponentProvider(false, this.environment) {
+            @Override
+            protected boolean isCandidateComponent(@NotNull AnnotatedBeanDefinition beanDefinition) {
+                return beanDefinition.getMetadata().isIndependent() && !beanDefinition.getMetadata().isAnnotation();
+            }
+        };
     }
 }

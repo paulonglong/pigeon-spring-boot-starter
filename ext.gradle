@@ -1,0 +1,7 @@
+ext {
+    groupId = 'com.yhyzgn.http'
+    artifactId = 'pigeon-spring-boot-starter'
+    version = '1.0.0'
+    description = 'SpringBoot starter of Pigeon.'
+    url = 'github.com/yhyzgn/pigeon-spring-boot-starter'
+}

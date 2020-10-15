@@ -23,7 +23,6 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.X509TrustManager;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * author : 颜洪毅
@@ -35,7 +34,7 @@ import java.util.Objects;
 @Data
 @Slf4j
 public class PigeonFactoryBean implements FactoryBean<Object>, InitializingBean, ApplicationContextAware {
-    private ApplicationContext applicationContext;
+    private ApplicationContext parent;
 
     private Class<?> pigeonInterface;
     private String baseURL;
@@ -70,8 +69,8 @@ public class PigeonFactoryBean implements FactoryBean<Object>, InitializingBean,
     }
 
     @Override
-    public void setApplicationContext(@NotNull ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
+    public void setApplicationContext(@NotNull ApplicationContext parent) throws BeansException {
+        this.parent = parent;
     }
 
     @SuppressWarnings("unchecked")
@@ -81,40 +80,25 @@ public class PigeonFactoryBean implements FactoryBean<Object>, InitializingBean,
             header.forEach(builder::header);
         }
         if (!CollectionUtils.isEmpty(interceptors)) {
-            interceptors.forEach(item -> builder.interceptor(getOrInstantiate(item)));
+            interceptors.forEach(item -> builder.interceptor(getInstance(item)));
         }
         if (!CollectionUtils.isEmpty(netInterceptors)) {
-            netInterceptors.forEach(item -> builder.interceptor(getOrInstantiate(item)));
+            netInterceptors.forEach(item -> builder.interceptor(getInstance(item)));
         }
         if (timeout > 0) {
             builder.timeout(timeout);
         }
         if (sslSocketFactory != null && sslSocketFactory != VoidSSLSocketFactory.class && sslTrustManager != null && sslTrustManager != VoidSSLX509TrustManager.class && sslHostnameVerifier != null && sslHostnameVerifier != VoidSSLHostnameVerifier.class) {
-            builder.https(getOrInstantiate(sslSocketFactory), getOrInstantiate(sslTrustManager), getOrInstantiate(sslHostnameVerifier));
+            builder.https(getInstance(sslSocketFactory), getInstance(sslTrustManager), getInstance(sslHostnameVerifier));
         }
         return (T) builder.build().create(pigeonInterface);
     }
 
-    private <B> B getOrInstantiate(Class<B> tClass) {
+    private <B> B getInstance(Class<B> clazz) {
         try {
-            return this.applicationContext.getBean(tClass);
+            return this.parent.getBean(clazz);
         } catch (NoSuchBeanDefinitionException e) {
-            return BeanUtils.instantiateClass(tClass);
+            return BeanUtils.instantiateClass(clazz);
         }
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        PigeonFactoryBean that = (PigeonFactoryBean) o;
-        return Objects.equals(applicationContext, that.applicationContext) &&
-                Objects.equals(pigeonInterface, that.pigeonInterface) &&
-                Objects.equals(baseURL, that.baseURL);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(applicationContext, pigeonInterface, baseURL);
     }
 }

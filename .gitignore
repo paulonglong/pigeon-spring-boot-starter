@@ -1,29 +1,7 @@
-HELP.md
+.idea/
 target/
-.mvn/
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-### IntelliJ IDEA ###
-.idea
-*.iws
 *.iml
-*.ipr
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
+.gradle/
 build/
-
-### VS Code ###
-.vscode/
+ext/
