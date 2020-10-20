@@ -24,7 +24,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     api 'com.squareup.okhttp3:okhttp:4.9.0'
-    api 'com.yhyzgn.http:pigeon:1.2.10'
+    api 'com.yhyzgn.http:pigeon:1.2.12'
 
     compileOnly 'org.jetbrains:annotations'
     compileOnly 'org.projectlombok:lombok'

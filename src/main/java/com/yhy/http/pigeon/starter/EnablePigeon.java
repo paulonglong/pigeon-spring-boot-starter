@@ -6,7 +6,6 @@ import com.yhy.http.pigeon.starter.internal.VoidSSLHostnameVerifier;
 import com.yhy.http.pigeon.starter.internal.VoidSSLSocketFactory;
 import com.yhy.http.pigeon.starter.internal.VoidSSLX509TrustManager;
 import com.yhy.http.pigeon.starter.register.PigeonAutoRegister;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Import;
 
 import javax.net.ssl.HostnameVerifier;
@@ -24,7 +23,6 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@EnableAutoConfiguration
 @Import({PigeonAutoRegister.class})
 public @interface EnablePigeon {
 
