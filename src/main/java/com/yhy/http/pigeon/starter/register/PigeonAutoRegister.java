@@ -171,7 +171,7 @@ public class PigeonAutoRegister implements ImportBeanDefinitionRegistrar, Resour
         AnnotationAttributes[] headers = (AnnotationAttributes[]) attrs.get("header");
         if (null != headers && headers.length > 0) {
             // key 重复时以后者为准
-            Map<String, String> temp = Stream.of(headers).collect(Collectors.toMap(attr -> attr.getString("name"), attr -> attr.getString("value"), (k1, k2) -> k2));
+            Map<String, String> temp = Stream.of(headers).collect(Collectors.toMap(attr -> attr.getString("name"), attr -> resolve((String) attr.get("value")), (k1, k2) -> k2));
             if (CollectionUtils.isEmpty(temp)) {
                 temp = header;
             } else if (!CollectionUtils.isEmpty(header)) {

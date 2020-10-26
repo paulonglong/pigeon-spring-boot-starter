@@ -38,9 +38,9 @@ public @interface EnablePigeon {
 
     PigeonInterceptor[] interceptor() default {};
 
-    long timeout() default 6000L;
+    String timeout() default "6000";
 
-    boolean logging() default true;
+    String logging() default "true";
 
     Class<? extends SSLSocketFactory> sslSocketFactory() default VoidSSLSocketFactory.class;
 
