@@ -200,13 +200,14 @@ public class PigeonAutoRegister implements ImportBeanDefinitionRegistrar, Resour
 
     private long getTimeout(Map<String, Object> attrs) {
         // 优先使用 @Pigeon 作用域
-        long temp = (Long) attrs.get("timeout");
+        long temp = Long.parseLong(resolve((String) attrs.get("timeout")));
         return temp > 0 ? temp : timeout;
     }
 
     private Boolean getLogging(Map<String, Object> attrs) {
-        // logging == null 时为初始状态，第一次回去全局配置
-        return (null == logging || logging) && (Boolean) attrs.get("logging");
+        // logging == null 时为初始状态
+        // 全局和局部同时开启时才启用
+        return (null == logging || logging) && Boolean.parseBoolean(resolve((String) attrs.get("logging")));
     }
 
     @SuppressWarnings("unchecked")
